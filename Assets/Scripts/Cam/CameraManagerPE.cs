@@ -19,33 +19,25 @@ public class CameraManagerPE : MonoBehaviour//相机控制脚本 PE代表手机版（pocket 
 {
     [SerializeField] MainManagerPE mainManager;
     [Header("\nCam & Postprocessing")]
-    [SerializeField] Quaternion attitude;//相机的朝向
-    [SerializeField] Vector3 attitudeRaw;//设备在空间中的朝向
-    [SerializeField] MyButton UpButton;
-    [SerializeField] MyButton DownButton;//蹲起按钮
-    public float SpeedY;//蹲起速度
-    public float PosY;//相机的上下位移
     [SerializeField] VolumeProfile m_Profile;//后处理配置文件
     [SerializeField] Camera CamView;//屏幕相机
     [SerializeField] Camera RenderCam;//渲染相机
-    [SerializeField] Transform t_camera;
-    [SerializeField] CamImageCreate imageCreate;
 
     [Header("CamRot&IK")]
-    [SerializeField] Vector3 CamRot;//相机三轴旋转（由手机陀螺仪提供）
-    [SerializeField] Transform rightHandIK;//右手IK位置
-    [SerializeField] Transform rightHandIKParentHolder;//在chest下随角色移动和旋转
-    [SerializeField] Transform RightHandIKParentParent;//parent的父级，负责在进入相机时初始化相机朝向为玩家方向
-    [SerializeField] float orientation;//进入相机时玩家的Y旋转
+    public Vector3 camRot;//处理后的手机旋转
+    [SerializeField] Transform rightHandIKPos;//右手IK位置
     [SerializeField] PlayerCharacterPE player;
-    [SerializeField] Transform rightHandIkParent;//跟随Holder的位置但不跟随旋转，接受手机陀螺仪的旋转
-    [SerializeField] Transform rightHandIkTarget;//绑在parent下，IK跟随IKtarget
+    public float orientalYAtti;//拿起相机时的初始Y输入
+    public float SpeedY;//蹲起速度
+    public float PosY;//相机的上下位移
 
     [Header("\nCamUI")]
     [SerializeField] CameraUIPE cameraUI;
     public float CamRectPosL = 102;
     public float CamRectPosR = 132;//相机实时画面的中心在UI上，距离屏幕左侧和右侧距离占比
-    [SerializeField] Vector2 CamRectSize = Vector2.zero;//相机在屏幕上显示的像素数
+    public Vector2 CamRectSize = Vector2.zero;//相机在屏幕上显示的像素数
+    [SerializeField] MyButton UpButton;
+    [SerializeField] MyButton DownButton;//蹲起按钮
 
     [Header("Lens Component镜头参数")]
     public float minFocusDistance = 0.35f;//最近对焦距离（m）
@@ -65,6 +57,7 @@ public class CameraManagerPE : MonoBehaviour//相机控制脚本 PE代表手机版（pocket 
     public float Fov = 60;//用Fov反算焦距
     public float focalLength;//焦距
     public float aperture = 4;//实际光圈
+    public float apertureMuti = 1;//pp的虚化量似乎和分别率有关
     //[SerializeField] float shotSpeed = 100;//快门速度，用于换算动态模糊
 
     [Header("FocusPoint焦点与对焦")]
@@ -74,8 +67,8 @@ public class CameraManagerPE : MonoBehaviour//相机控制脚本 PE代表手机版（pocket 
     [SerializeField] Transform focusOrientation;//对焦射线朝向
     
     [Header("\nImage OutPut照片生成")]
-    public int pixelX = 5184;//cmos像素宽度
-    public int pixelY = 3888;//cmos像素高度
+    public int pixelX = 4000;//cmos像素宽度
+    public int pixelY = 3000;//cmos像素高度
     public bool Raw_outPut;//是否输出raw
     [SerializeField] Vector3 gravity;
     public int photographSerial;//照片计数
@@ -83,9 +76,10 @@ public class CameraManagerPE : MonoBehaviour//相机控制脚本 PE代表手机版（pocket 
 
     void Start()
     {
-        t_camera = CamView.GetComponent<Transform>();
         Input.gyro.enabled = true;//打开陀螺仪
         CamRectSize = SetCameraScreenSize();//调整CamView的长宽比
+        apertureMuti = CamRectSize.y / 1080;
+        rightHandIKPos = transform.parent;
     }
     public void SaveToJson()
     {
@@ -98,8 +92,8 @@ public class CameraManagerPE : MonoBehaviour//相机控制脚本 PE代表手机版（pocket 
     }
     private void OnEnable()
     {
-        orientation = player.yRot;
-        RightHandIKParentParent.localRotation = Quaternion.Euler(90, orientation, 0);
+        orientalYAtti = RotProcess().eulerAngles.y;
+        player.yRotOri = player.yRot;
     }
     private void OnDisable()
     {
@@ -115,7 +109,7 @@ public class CameraManagerPE : MonoBehaviour//相机控制脚本 PE代表手机版（pocket 
         return new Vector2(ScreenRes.y * 4 / 3, ScreenRes.y);
     }
 
-    private Quaternion CameraTransform()//陀螺仪控制相机（其实是手IK和玩家mesh）转动
+    private void CameraTransform()//陀螺仪控制相机（其实是手IK和玩家mesh）转动
     {
         //位置控制
         if (UpButton.pressed)
@@ -128,41 +122,22 @@ public class CameraManagerPE : MonoBehaviour//相机控制脚本 PE代表手机版（pocket 
         }
         PosY = MainManagerPE.ClampNew(PosY, -0.6f, 0.3f, Time.fixedDeltaTime * 10);
 
-        //旋转控制
-        //我承认这个是shit 但是考虑到手机陀螺仪的奇怪输入就先放在这吧(能用就行，绷)
-        attitudeRaw = Input.gyro.attitude.eulerAngles;
-        if (attitudeRaw.x > 350)
-        {
-            attitudeRaw.y = Mathf.Clamp(attitudeRaw.y, 10, 350);
-        }
-        if (attitudeRaw.y > 350)
-        {
-            attitudeRaw.x = Mathf.Clamp(attitudeRaw.x, 10, 350);
-        }
-        attitude = Quaternion.Slerp(attitude,Quaternion.Euler(attitudeRaw),700/OISLevel/focalLength*Time.fixedDeltaTime);//获取手机在空间中的朝向并应用防抖
-        rightHandIkParent.localRotation = attitude;
-        rightHandIkParent.position = rightHandIKParentHolder.position + new Vector3(0,PosY,0);
-        rightHandIK.position += (rightHandIkTarget.position-rightHandIK.position) * 4f * Time.fixedDeltaTime;
-        rightHandIK.rotation = rightHandIkTarget.rotation;
-        return rightHandIK.rotation;
-        /*
-         * 简单地说一下这坨屎山是什么
-         * 主要原因是我搞不懂手机陀螺仪输入的角度的一些复杂旋转……
-         * 
-         * 现在的写法是：Player的骨骼上有一个right Hand IK Parent Holder,仅跟随玩家动画进行变换
-         * 玩家prefab下放right Hand IK Parent,因为prefab不转所以这个parent不会跟随玩家旋转
-         * Parent的父级RightHandIK Parent带有一个（90，Orientation，0）的旋转。 将陀螺仪输入值插值应用为parent的localRot
-         * Parent下有IKTarget和CamManager
-         * 其中，IK Target带有一个相对parent的恒定旋转角，真正的右手IK会在角度和位置上跟随这个IK Target
-         * CamManager就是手持相机，也带有一个恒定旋转角（180，180，0），来使相机的旋转正确
-         * 沿着Cam视线20m处放了一个PlayerCamviewTarget（跟随相机旋转），PlayerCharacter脚本里会在这个空物体投影到玩家所在xz平面处放置PlayerCamviewTargetHorizontal
-         * 然后让玩家lookAt这个PlayerCamviewTargetHorizontal，来实现玩家的旋转……
-         * 后面应该得把陀螺仪输入值搞明白之后，通过某个变换转成x俯仰y航向z横滚，这样就可以简单很多了
-         * 但是在这之前，先让这坨屎山顶一顶
-         * （反正好像也没多几行代码？）
-         */
-    }
+        //新的旋转控制！
+        Quaternion deviceRotation = RotProcess();
+        camRot = Quaternion.Slerp(Quaternion.Euler(camRot), deviceRotation, 700 / OISLevel / focalLength * Time.fixedDeltaTime).eulerAngles;//防抖并转换到eularAngles
+        rightHandIKPos.transform.localRotation = Quaternion.Euler(camRot.x, 0, camRot.z);//分离x（俯仰）z（横滚）到手IK的旋转
+        rightHandIKPos.localPosition = new Vector3(0, 1.5f + PosY, 0.21f);
 
+    }
+    private Quaternion RotProcess()
+    {
+        Quaternion gyroAttitude = Input.gyro.attitude;//原始数据
+        return (Quaternion.Euler(90, 0, 0) * new Quaternion(gyroAttitude.x, gyroAttitude.y, -gyroAttitude.z, -gyroAttitude.w));//转换到unity坐标系的朝向
+    }
+    public float getYRot()
+    {
+        return camRot.y - orientalYAtti;
+    }
     private void ApertureControll(float muti)//虚化控制
     {
         DepthOfField depthOfField;
@@ -182,7 +157,7 @@ public class CameraManagerPE : MonoBehaviour//相机控制脚本 PE代表手机版（pocket 
     {
         focusAngle = new Vector3((Mathf.Atan(cameraUI.focusLocalPos.x) * 4 / 3.14159f/*弧度制的45°*/)/*距离中心的角度比例*/, Mathf.Atan(cameraUI.focusLocalPos.y) * 4 / 3.14159f, 0);
         focusAngle *= CamView.fieldOfView;
-        focusOrientation.localRotation = Quaternion.Euler(focusAngle.y * 0.8f, -focusAngle.x * 0.65f, 0);//0.8和0.65是实测出来的纠正系数，测试发现和屏幕分辨率无关
+        focusOrientation.localRotation = Quaternion.Euler(-focusAngle.y * 0.77f, focusAngle.x * 0.63f, 0);//实测出来的纠正系数，测试发现和屏幕分辨率无关
         Ray ray = new Ray(CamView.GetComponent<Transform>().position, focusOrientation.forward);//发出测距线
         RaycastHit hit;
         Physics.Raycast(ray, out hit);//用raycast探测对焦距离
@@ -218,7 +193,7 @@ public class CameraManagerPE : MonoBehaviour//相机控制脚本 PE代表手机版（pocket 
     {
         CameraTransform();
         FovControll();
-        ApertureControll(1);
+        ApertureControll(apertureMuti);
         if (!focusOn)
         {
             AF();

@@ -63,8 +63,8 @@ public class CameraUIPE : UIManager
     }
     void Focus()
     {
-        m_focusAreaUI.GetComponent<CanvasGroup>().alpha = 1;//显示对焦区域
         m_focusAreaUI.GetComponent<RectTransform>().position = m_screenTouch.touchPoint;//对焦区域移到点击的地方
+        m_focusAreaUI.GetComponent<Animator>().Play("Focus");
         focusLocalPos.x = (m_screenTouch.touchPoint.x - SideSize.x) / (ScreenRes.y / 3 * 4 / 2) - 1;
         focusLocalPos.y = (m_screenTouch.touchPoint.y - ScreenRes.y / 2) / (ScreenRes.y);//计算对焦位置
         m_cameraManager.focusOn = false;

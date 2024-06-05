@@ -9,13 +9,11 @@ public class PictureInstacer : MonoBehaviour
     [SerializeField] GameObject PictureOnMapPrefab;
     [SerializeField] string path;
     [SerializeField] Transform MapUI;
-    bool initialized;
     
     void Start()
     {
         path = GetAlbumPath();
         Main();
-        initialized = true;
     }
     static public string GetAlbumPath()
     {
@@ -35,7 +33,7 @@ public class PictureInstacer : MonoBehaviour
         PictureOnMap pictureOnMap = PictureOnMapPrefab.GetComponent<PictureOnMap>();
         pictureOnMap.useFilePath = true;
         pictureOnMap.index = data.index;
-        pictureOnMap.aspectRatio = data.pixelX / data.pixelY;
+        //pictureOnMap.aspectRatio = data.pixelX / data.pixelY;
 
         Instantiate(PictureOnMapPrefab, pos, Quaternion.Euler(90, 0, 0), MapUI);
     }

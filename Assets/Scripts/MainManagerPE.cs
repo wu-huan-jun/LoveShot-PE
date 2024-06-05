@@ -30,6 +30,7 @@ public class MainManagerPE : MonoBehaviour
     [SerializeField] GameObject CamViewUI;  //相机UI
     [SerializeField] GameObject PostureButton;//Pose按钮
     [SerializeField] Rig TwoHandsIK;        //双手IK到相机位置
+    [SerializeField] GameObject Walls;
     public PlayerCharacterPE playerMale;
     public PlayerFemale playerFemale;
 
@@ -78,7 +79,10 @@ public class MainManagerPE : MonoBehaviour
             TwoHandsIK.weight = 0;//和相机全部反操作
             map.SetActive(false);//关掉大地图UI及其控制器
             MapPictures.SetActive(false);
-            PostureButton.SetActive(true);
+            PostureButton.SetActive(true); if (Walls != null)
+            {
+                Walls.SetActive(true);
+            }
         }
         if (playState == PlayState.camera)
         {
@@ -88,6 +92,10 @@ public class MainManagerPE : MonoBehaviour
             BasicPlayCanvas.enabled = false;//关掉场景UI
             CamViewUI.SetActive(true);//打开相机UI
             TwoHandsIK.weight = 1;//打开IK追踪
+            if(Walls != null)
+            {
+                Walls.SetActive(false);
+            }
         }
         if(playState == PlayState.map)
         {

@@ -55,6 +55,7 @@ public class FileSaveManager : MonoBehaviour
     [SerializeField] PlayerFemale playerFemale;
     [SerializeField] CameraManagerPE CamViewManager;
     [SerializeField] LoadScene loadScene;
+    [SerializeField] SaveDialougeAndSequence dialougeAndSequence;
 
     void Start()
     {
@@ -72,13 +73,13 @@ public class FileSaveManager : MonoBehaviour
             saveCount = loadData.saveCount;
             liveSaveIndex = loadData.liveSaveIndex;
         }
-        if (SceneManager.GetActiveScene().buildIndex == 1)
+        if (SceneManager.GetActiveScene().buildIndex > 0)
         {
             var data = SaveData.loadJsonFromDefaultPath<SaveFileInfo>("SaveFileInfo.json");
-            if (!data.initialized)//如果一个新存档还没有存档还未被场景初始化
+            if (!data.initialized)//如果一个新存档还未被场景初始化
             {
                 Save();
-                SaveFileInfo saveFileInfo = new SaveFileInfo(data.index,data.name, data.createDate, data.createTime, 1);//刷新存档状态
+                SaveFileInfo saveFileInfo = new SaveFileInfo(data.index, data.name, data.createDate, data.createTime, SceneManager.GetActiveScene().buildIndex);//刷新存档状态
                 SaveData.SaveAtDefaultPath("SaveFileInfo.Json", saveFileInfo);
             }
             else
@@ -98,6 +99,7 @@ public class FileSaveManager : MonoBehaviour
         playerMale.LoadFromJson();
         playerFemale.LoadFromJson();
         CamViewManager.LoadFromJson();
+        dialougeAndSequence.LoadFromJson();
     }
     public void Save()
     {
@@ -105,6 +107,14 @@ public class FileSaveManager : MonoBehaviour
         playerFemale.SaveToJson();
         mainManagerPE.SaveToJson();
         CamViewManager.SaveToJson();
+        dialougeAndSequence.SaveToJson();
+    }
+    public void Refresh()//用于切scene时刷新初始化状态
+    {
+        SaveFileInfo data = SaveData.loadJsonFromDefaultPath<SaveFileInfo>("SaveFileInfo.Json");
+        data.initialized = false;
+        SaveData.SaveAtDefaultPath("SaveFileInfo.Json", data);
+
     }
     public void CreateSaveFile()//用于“新游戏”的创建存档
     {

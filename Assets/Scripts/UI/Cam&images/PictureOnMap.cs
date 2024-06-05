@@ -7,7 +7,8 @@ using UnityEngine.UI;
 
 public class PictureOnMap : UIManager//地图上的照片缩略图
 {
-    public Transform photoTransform;//拍照的位置,手动实例化时需要手动移动这个空物体
+    public Vector3 photoPos;
+    public Quaternion photoRot;
     [SerializeField] Image image_object;//本prefab下挂的图片
     [SerializeField] RectTransform image_icon_t;//本prefab本体（带小三角的正方形）
 
@@ -36,8 +37,10 @@ public class PictureOnMap : UIManager//地图上的照片缩略图
             var imageData = SaveData.loadFromJson<ImageData>(path + ".exif");
             imageSource = new Texture2D(imageData.pixelX, imageData.pixelY);
             imageSource.LoadImage(getImageByte(path+".jpg"));
-            photoTransform.position = imageData.pos;
-            photoTransform.rotation = imageData.rot;
+            photoPos = imageData.pos;
+            photoRot = imageData.rot;
+            aspectRatio = 1.0f*imageData.pixelX / imageData.pixelY;
+            Debug.Log("长宽比：" + imageData.pixelX.ToString()+"/"+ imageData.pixelY.ToString()+"="+ aspectRatio.ToString());
             image_object.GetComponent<RectTransform>().localScale = new Vector3(.007f, .002275f, .00175f);
             image_object.GetComponent<RectTransform>().localPosition = new Vector3(0,.75f, 0);
         }
@@ -48,7 +51,8 @@ public class PictureOnMap : UIManager//地图上的照片缩略图
     public void OnSelect()
     {
         pictureFullScreenPrefab.aspectRatio = aspectRatio;
-        pictureFullScreenPrefab.photoTransform = photoTransform;
+        pictureFullScreenPrefab.photoRot = photoRot;
+        pictureFullScreenPrefab.photoPos = photoPos;
         pictureFullScreenPrefab.imageSource = imageSource;
         Instantiate(pictureFullScreenPrefab.gameObject, FullScreenPhotoPannel.transform);
     }

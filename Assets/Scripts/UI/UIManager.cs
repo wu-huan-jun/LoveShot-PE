@@ -46,6 +46,7 @@ public class UIManager : MonoBehaviour
         if (m_canvasGroup.alpha >= 1)
         {
             m_canvasGroup.interactable = true;
+            //m_canvasGroup.blocksRaycasts = true;
             return true;
         }
         else return false;
@@ -56,6 +57,29 @@ public class UIManager : MonoBehaviour
         if (m_canvasGroup.alpha <= 0)
         {
             m_canvasGroup.interactable = false;
+            //m_canvasGroup.blocksRaycasts = false;
+            return true;
+        }
+        else return false;
+    }
+
+    static public bool FadeInAn(CanvasGroup canvasGroup, float fadeTime)
+    {
+        if (canvasGroup.gameObject.GetComponent<Animator>() != null)
+        {
+            Animator animator = canvasGroup.gameObject.GetComponent<Animator>();
+            animator.speed = 1 / fadeTime;
+            animator.Play("FadeIn");
+            return true;
+        }
+        else return false;
+    }static public bool FadeOutAn(CanvasGroup canvasGroup, float fadeTime)
+    {
+        if (canvasGroup.gameObject.GetComponent<Animator>() != null)
+        {
+            Animator animator = canvasGroup.gameObject.GetComponent<Animator>();
+            animator.speed = 1 / fadeTime;
+            animator.Play("FadeOut");
             return true;
         }
         else return false;
@@ -78,4 +102,5 @@ public class UIManager : MonoBehaviour
             group.blocksRaycasts = false;
         }
     }
+    
 }

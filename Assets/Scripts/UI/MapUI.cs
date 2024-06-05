@@ -45,9 +45,9 @@ public class MapUI : UIManager
     void ApplyTransform()
     {
         //输入应用到相机变换
-        mapMultiplier = MainManagerPE.ClampNew(mapMultiplier, 0.81f, 2.7f, Time.fixedDeltaTime * 10);
-        mapCamPos.x = MainManagerPE.ClampNew(mapCamPos.x, -0.6f, 0.6f, Time.fixedDeltaTime * 10);
-        mapCamPos.y = MainManagerPE.ClampNew(mapCamPos.y, -0.8f, 0.8f, Time.fixedDeltaTime * 10);
+        mapMultiplier = MainManagerPE.ClampNew(mapMultiplier, 0.3f, 1.8f, Time.fixedDeltaTime * 10);
+        mapCamPos.x = MainManagerPE.ClampNew(mapCamPos.x, 0.8f,1.2f, Time.fixedDeltaTime * 10);
+        mapCamPos.y = MainManagerPE.ClampNew(mapCamPos.y, -1.0f, -0.5f, Time.fixedDeltaTime * 10);
         mapCam.orthographicSize = 81 / mapMultiplier;
         t_mapCam.localPosition = new Vector3(mapCamPos.x*4, 30, mapCamPos.y*4);
     }

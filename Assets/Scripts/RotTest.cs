@@ -5,36 +5,22 @@ using UnityEngine.Android;
 
 public class RotTest : MonoBehaviour
 {
-    [SerializeField] Transform m_transform;
-    [SerializeField] Rigidbody m_rb;
-    [SerializeField] float g = 0;
-    [SerializeField] bool b_;
-    [SerializeField] float averageg;
-    int i;
-    // Start is called before the first frame update
     void Start()
     {
-        m_transform = GetComponent<Transform>();
-        m_rb = GetComponent<Rigidbody>();
-        Input.gyro.enabled = true;//打开陀螺仪
+        // 启用陀螺仪
+        Input.gyro.enabled = true;
     }
 
-    // Update is called once per frame
-    void FixedUpdate()
+    void Update()
     {
-        g = Input.acceleration.magnitude;
-        
-        if (b_)
-        {
-            i++;
-            if (i >= 1200)
-            {
-                averageg += g;
-            }
-        }
+        // 获取陀螺仪的四元数
+        Quaternion gyroAttitude = Input.gyro.attitude;
 
-        else
-        { m_rb.AddForce(0, g-averageg/ (i - 1200), 0, ForceMode.Acceleration); }
-        Debug.Log(averageg / (i-1200));
+        // 将四元数从设备坐标系转换为Unity坐标系
+        Quaternion deviceRotation = new Quaternion(gyroAttitude.x, gyroAttitude.y, -gyroAttitude.z, -gyroAttitude.w);
+
+        // 应用旋转
+        transform.rotation = Quaternion.Euler(90, 0, 0) * deviceRotation;
     }
 }
+

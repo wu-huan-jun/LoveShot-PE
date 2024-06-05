@@ -360,8 +360,8 @@ MonoBehaviour:
   aspectRatio: 0
   imageSource: {fileID: 2800000, guid: 5824ebd9a1871f043b101bcb91d829e8, type: 3}
   FullScreenPhotoPannel: {fileID: 0}
-  playerName: Xiyue
-  playerMeshName: Xiyue_mesh
+  playerMeshName: xiyue0.1.3Baked
+  MainManager: MainGameManager
 --- !u!1 &4001091895884958809
 GameObject:
   m_ObjectHideFlags: 0

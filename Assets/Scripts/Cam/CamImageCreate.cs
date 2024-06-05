@@ -57,10 +57,20 @@ public class CamImageCreate : MonoBehaviour
     }
     public ImageData SaveToJson(string path)
     {
-        ImageData imageData = new ImageData(photographSerial,pixelX,pixelY,t_RenderCam.position,t_RenderCam.rotation,isPortrait);
-        SaveData.SaveByJson(Path.Combine(path,
-                                            "P"+photographSerial.ToString()+".exif"), imageData);
-        return imageData;
+        if (isPortrait)
+        {
+            ImageData imageData = new ImageData(photographSerial, pixelY, pixelX, t_RenderCam.position, t_RenderCam.rotation, isPortrait);
+            SaveData.SaveByJson(Path.Combine(path,
+                                                "P" + photographSerial.ToString() + ".exif"), imageData);
+            return imageData;
+        }
+        else
+        {
+            ImageData imageData = new ImageData(photographSerial, pixelX, pixelY, t_RenderCam.position, t_RenderCam.rotation, isPortrait);
+            SaveData.SaveByJson(Path.Combine(path,
+                                            "P" + photographSerial.ToString() + ".exif"), imageData);
+            return imageData;
+        }
     }
     IEnumerator CameraCaptureCoroutine(Camera camera, Rect rect, string fileName)//照片渲染主函数
     {
@@ -69,21 +79,21 @@ public class CamImageCreate : MonoBehaviour
         if (-1 <= gravity.y && gravity.y < -0.5)//Home在右
         {
             //默认状态，什么也不用做
-            t_RenderCam.localRotation = Quaternion.Euler(180, 180, 0);
+            t_RenderCam.localRotation = Quaternion.Euler(0, 0, 0);
         }
         else if (1 >= gravity.y && gravity.y > 0.5)//Home在左
         {
-            t_RenderCam.localRotation = Quaternion.Euler(180, 180, 180);//相机Z转180
+            t_RenderCam.localRotation = Quaternion.Euler(0, 0, 180);//相机Z转180
         }
         else if (-1 <= gravity.x && gravity.x < -0.5)//Home在上（反拿竖）
         {
-            t_RenderCam.localRotation = Quaternion.Euler(180, 180, -90);//
+            t_RenderCam.localRotation = Quaternion.Euler(0, 0, -90);//
             isPortrait = true;
             //交换长宽比
         }
         else if (1 >= gravity.x && gravity.x > 0.5)//Home在下（正拿竖）
         {
-            t_RenderCam.localRotation = Quaternion.Euler(180, 180, 90);//相机Z转90 
+            t_RenderCam.localRotation = Quaternion.Euler(0, 0, 90);//相机Z转90 
             isPortrait = true;
         }
         if (isPortrait)
@@ -102,10 +112,12 @@ public class CamImageCreate : MonoBehaviour
         
         SaveToJson(pathN+"/");//保存exif
 
-        yield return new WaitForSeconds(3); //协程工作
         RenderTexture render = new RenderTexture((int)rect.width, (int)rect.height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.sRGB);
         render.enableRandomWrite = true; // 启用随机写入以进行 GPU 访问
         render.Create();
+        float lastApertureMuti = CamManager.apertureMuti;//保存原来的虚化乘数
+        CamManager.apertureMuti = CamManager.CamRectSize.y / rect.height;//新的虚化乘数
+        Debug.Log(CamManager.apertureMuti);
         c_RenderCam.enabled = true;//打开渲染相机
         camera.targetTexture = render;//设置截图相机的targetTexture为render
         c_RenderCam.rect = new Rect(0, 0, 1, 1);//相机铺满整个RenderTexture
@@ -117,13 +129,14 @@ public class CamImageCreate : MonoBehaviour
             tex = new Texture2D((int)rect.width, (int)rect.height, TextureFormat.RGB24, false);//8bit
         RenderTexture.active = render;//激活RenderTexture
         tex.ReadPixels(rect, 0, 0);//读取像素
+
+        yield return new WaitForSeconds(3); //协程工作
         tex.Apply();//保存像素信息
         RenderTexture.active = null;//关闭RenderTexture的激活状态
         t_RenderCam.localRotation = Quaternion.Euler(180, 180, 0);//恢复相机旋转
-        
         render.Release();//释放RenderTex
         c_RenderCam.enabled = false;//关闭渲染相机
-
+        CamManager.apertureMuti = lastApertureMuti;//恢复虚化乘数
 
         //生成图片并保存到本地
         byte[] bytes = tex.EncodeToJPG();
@@ -139,7 +152,7 @@ public class CamImageCreate : MonoBehaviour
         //实例化一个imageOnMapPrefab,并将其内的图片设置为刚刚拍的照片
         imageOnMapPrefab.GetComponent<PictureOnMap>().useFilePath = true;
         imageOnMapPrefab.GetComponent<PictureOnMap>().index = photographSerial;
-        imageOnMapPrefab.GetComponent<PictureOnMap>().aspectRatio = rect.width / rect.height;
+        //imageOnMapPrefab.GetComponent<PictureOnMap>().aspectRatio = rect.width / rect.height;
         Instantiate(imageOnMapPrefab, new Vector3(m_RenderCam.transform.position.x, -80, m_RenderCam.transform.position.z),
             Quaternion.Euler(90,0,0),MapUI.transform);
 
